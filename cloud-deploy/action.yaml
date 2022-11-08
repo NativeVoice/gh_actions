@@ -33,6 +33,10 @@ runs:
         env:
           TAG: ${{ inputs.release_tag }}
 
+      - name: Configure Docker
+        run: |-
+          gcloud --quiet auth configure-docker us-east1-docker.pkg.dev
+          
       # Set up Cloud Deploy in your project following the definition in your clouddeploy.yaml file
       - name: Create or update Cloud Deploy Pipeline
         shell: bash
