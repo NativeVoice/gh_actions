@@ -30,7 +30,7 @@ runs:
         uses: google-github-actions/auth@v0
         with:
           # workload_identity_provider is configured in GCP console Workload Identity Pools
-          # projects/1021433448122/locations/global/workloadIdentityPools/workload-pool/providers/workload-gh-provider
+          # projects/<PROJECT_NUMBER>/locations/global/workloadIdentityPools/workload-pool/providers/workload-gh-provider
           workload_identity_provider: projects/${{ inputs.project_number }}/locations/global/workloadIdentityPools/workload-pool/providers/workload-gh-provider
           service_account:  'cicd-service-account@${{ inputs.project_id }}.iam.gserviceaccount.com'
           project_id:  ${{ inputs.project_id }} 

@@ -1,0 +1,62 @@
+name: 'gcloud setup'
+description: 'gcloud setup'
+
+inputs:
+  project_id:
+    description: 'literal project identifier'
+    required: true
+
+  region:
+    description: ''
+    required: true
+    default: 'us-east1'
+
+  release_tag:
+    description: ''
+    required: true
+
+  delivery_pipeline_name:
+    description: ''
+    required: true
+
+  image_repository:
+    description: ''
+    required: true
+
+runs:
+  using: "composite"
+  steps:          
+      - name: "Reformat TAG"
+        id: release
+        shell: bash
+        run:   echo ''::set-output name=new_tag::${TAG//./-}''
+        env:
+          TAG: ${{ inputs.release_tag }}
+
+      # Set up Cloud Deploy in your project following the definition in your clouddeploy.yaml file
+      - name: Create or update Cloud Deploy Pipeline
+        run: |-
+          gcloud deploy apply --file clouddeploy.yaml --region ${{ inputs.region }} --project ${{ inputs.project_id }}
+          
+      # Build your application image following the specified profile as defined in your skaffold.yaml file
+      - name: Skaffold build
+        run: |-
+          skaffold build --file-output artifacts.json --tag $TAG
+        env:
+          TAG: ${{ steps.release.outputs.new_tag }}
+
+      # Initiate deployment following the pipeline definition from your clouddeploy.yaml file
+      - name: Create release
+        run: |-
+          gcloud deploy releases create ${RELEASE_NAME//./-} \
+            --delivery-pipeline=${{ inputs.delivery_pipeline_name }} \
+            --region=${{ inputs.region }} \
+            --gcs-source-staging-dir=gs://${{ inputs.project_id }}_clouddeploy/source \
+            --images=${IMAGE_REPOSITORY}=us-east1-docker.pkg.dev/${{ inputs.project_id }}/applications/${IMAGE_REPOSITORY}:$TAG
+        env:        
+          RELEASE_NAME: release-${{ steps.release.outputs.new_tag }}
+          TAG: ${{ steps.release.outputs.new_tag }}
+          IMAGE_REPOSITORY: ${{ inputs.image_repository }} 
+
+
+
