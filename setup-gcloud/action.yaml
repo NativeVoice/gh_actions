@@ -42,7 +42,7 @@ runs:
         uses: google-github-actions/setup-gcloud@v0
         with:
           project_id: ${{ inputs.project_id }} 
-          install_components: 'beta'
+          install_components: 'beta,skaffold'
       
       # Configure docker authorization for access to the Google Artifact Registry
       - name: Configure Docker
