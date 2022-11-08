@@ -35,11 +35,13 @@ runs:
 
       # Set up Cloud Deploy in your project following the definition in your clouddeploy.yaml file
       - name: Create or update Cloud Deploy Pipeline
+        shell: bash
         run: |-
           gcloud deploy apply --file clouddeploy.yaml --region ${{ inputs.region }} --project ${{ inputs.project_id }}
           
       # Build your application image following the specified profile as defined in your skaffold.yaml file
       - name: Skaffold build
+        shell: bash
         run: |-
           skaffold build --file-output artifacts.json --tag $TAG
         env:
@@ -47,6 +49,7 @@ runs:
 
       # Initiate deployment following the pipeline definition from your clouddeploy.yaml file
       - name: Create release
+        shell: bash
         run: |-
           gcloud deploy releases create ${RELEASE_NAME//./-} \
             --delivery-pipeline=${{ inputs.delivery_pipeline_name }} \
