@@ -3,11 +3,11 @@ description: 'gcloud setup'
 
 inputs:
   project_id:
-    description: ''
+    description: 'literal project identifier'
     required: true
 
   project_number:
-    description: ''
+    description: 'numberic project identifier, used in workload_identity_provider'
     required: true
 
   region:
