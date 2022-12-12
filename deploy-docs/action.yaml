@@ -32,7 +32,9 @@ runs:
       with:
         python-version: '3.10' 
 
-    - run: |
+    - name: deploy
+      shell: bash
+      run: |
         pip install mkdocs mkdocs-material mkdocs-minify-plugin mkdocs-git-revision-date-localized-plugin mkdocs-awesome-pages-plugin
         python3 -m mkdocs build
         rm -rf node_modules
