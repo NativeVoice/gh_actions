@@ -42,4 +42,5 @@ runs:
         gsutil rm -r ${{ inputs.bucket }} || echo "bucket doesn't exist"
         gcloud storage buckets create ${{ inputs.bucket }}
         gsutil cp -r * ${{ inputs.bucket }}
+        gsutil iam ch serviceAccount:gsa-nv-service-sa@${{ inputs.pr_project_id }}.iam.gserviceaccount.com:roles/storage.admin ${{ inputs.bucket }}
 
