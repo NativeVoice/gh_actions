@@ -1,0 +1,45 @@
+name: 'deploy-docs'
+description: 'deploy docs to google cloud storage'
+
+inputs:
+  project_id:
+    description: 'literal project identifier'
+    required: true
+
+  project_number:
+    description: 'numberic project identifier, used in workload_identity_provider'
+    required: true
+
+  region:
+    description: ''
+    required: true
+
+  bucket:
+    description: 'target bucket to copy docs in'
+    required: true
+
+runs:
+  using: "composite"
+  steps:          
+    - name: "gcloud-setup"
+      uses: NativeVoice/gh_actions/setup-gcloud@develop
+      with:
+        project_id: ${{ inputs.project_id }}
+        project_number: ${{ inputs.project_number }}
+        region: ${{ inputs.region }}
+
+    - uses: actions/setup-python@v4
+      with:
+        python-version: '3.10' 
+
+    - run: |
+        pip install mkdocs mkdocs-material mkdocs-minify-plugin mkdocs-git-revision-date-localized-plugin mkdocs-awesome-pages-plugin
+        python3 -m mkdocs build
+        rm -rf node_modules
+        npm i --force
+        ls -l
+        cd site
+        gsutil rm -r ${{ inputs.bucket }} || echo "bucket doesn't exist"
+        gcloud storage buckets create ${{ inputs.bucket }}
+        gsutil cp -r * ${{ inputs.bucket }}
+
