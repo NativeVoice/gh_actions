@@ -50,7 +50,7 @@ runs:
         gcloud storage buckets create ${{ inputs.bucket }}
         gsutil cp -r * ${{ inputs.bucket }}
 
-        for project_id in cut -d "${{ inputs.vistor_projects }}"; do
+        for project_id in $(echo "${{ inputs.vistor_projects }}" | cut -d ","); do
           gsutil iam ch serviceAccount:gsa-nv-service-sa@${project_id}.iam.gserviceaccount.com:roles/storage.admin ${{ inputs.bucket }}
         done
 
