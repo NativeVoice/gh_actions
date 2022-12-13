@@ -47,7 +47,7 @@ runs:
         ls -l
         cd site
         gsutil rm -r ${{ inputs.bucket }} || echo "bucket doesn't exist"
-        gcloud storage buckets create ${{ inputs.bucket }}
+        gcloud storage buckets create ${{ inputs.bucket }} --region=${{ inputs.region}}
         gsutil cp -r * ${{ inputs.bucket }}
 
         for project_id in $(echo "${{ inputs.vistor_projects }}" | cut -d "," -f1,2 --output-delimiter=" "); do
