@@ -18,6 +18,10 @@ inputs:
     description: 'target bucket to copy docs in'
     required: true
 
+  vistor_projects:
+    description: 'comma separated project_ids being granted read only access'
+    required: true
+    
 runs:
   using: "composite"
   steps:          
@@ -35,6 +39,7 @@ runs:
     - name: deploy
       shell: bash
       run: |
+        set -e -x
         pip install mkdocs mkdocs-material mkdocs-minify-plugin mkdocs-git-revision-date-localized-plugin mkdocs-awesome-pages-plugin
         python3 -m mkdocs build
         rm -rf node_modules
@@ -44,5 +49,8 @@ runs:
         gsutil rm -r ${{ inputs.bucket }} || echo "bucket doesn't exist"
         gcloud storage buckets create ${{ inputs.bucket }}
         gsutil cp -r * ${{ inputs.bucket }}
-        gsutil iam ch serviceAccount:gsa-nv-service-sa@${{ inputs.pr_project_id }}.iam.gserviceaccount.com:roles/storage.admin ${{ inputs.bucket }}
+
+        for project_id in cut -d "${{ inputs.vistor_projects }}"; do
+          gsutil iam ch serviceAccount:gsa-nv-service-sa@${project_id}.iam.gserviceaccount.com:roles/storage.admin ${{ inputs.bucket }}
+        done
 
