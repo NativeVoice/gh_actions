@@ -23,6 +23,11 @@ inputs:
     description: ''
     required: true
 
+  delivery_pipeline_target:
+    description: 'target deployment env'
+    required: true
+    default: 'dv'
+
 runs:
   using: "composite"
   steps:          
@@ -66,5 +71,70 @@ runs:
           TAG: ${{ steps.release.outputs.new_tag }}
           IMAGE_REPOSITORY: ${{ inputs.image_repository }} 
 
+      # it waits up to 5 minutes
+      - name: Wait rollout creation completes
+        shell: bash
+        run: |-
+          for i in $(seq 150); do
+            gcloud deploy rollouts list \
+              --delivery-pipeline=${DELIVER_PIPELINE} \
+              --release=${RELEASE_NAME//./-} \
+              --region=${REGION} \
+              --project=${PROJECT_ID} \
+              | grep name \
+              | grep "to-${TARGET}-0001"
+
+            if [ $? -eq 0 ]; then
+              break
+            fi
+
+            sleep 2
+          done
+        env:
+          RELEASE_NAME: release-${{ steps.release.outputs.new_tag }}
+          REGION: ${{ inputs.region }}
+          PROJECT_ID: ${{ inputs.project_id }}
+          DELIVER_PIPELINE: ${{ inputs.delivery_pipeline_name }}
+          TARGET: ${{ inputs.delivery_pipeline_target }}
+
+      # rollout should be already created up to this step
+      # it waits up to 30 minutes
+      - name: Wait rollout completes
+        shell: bash
+        run: |
+
+          for i in $(seq 360); do
+            state=$(gcloud deploy rollouts describe ${RELEASE_NAME//./-}-to-${TARGET}-0001 \
+              --delivery-pipeline=${DELIVER_PIPELINE}\
+              --release=${RELEASE_NAME//./-} \
+              --region=${REGION} \
+              --project=${PROJECT_ID} | grep ^state | cut -d ' ' -f 2)
+            if [ $? -eq 0 ]; then
+              case $state in
+                SUCCEEDED)
+                  echo "deployment succeeded!"
+                  break
+                  ;;
+                FAILED)
+                  echo "deployment failed"
+                  exit 1
+                  ;;
+                IN_PROGRESS)
+                  echo "still running"
+                  ;;
+                *)
+                  echo "state=$state"
+                  ;;
+              esac
+            fi
+            sleep 5
+          done
+
+        env:
+          RELEASE_NAME: release-${{ steps.release.outputs.new_tag }}
+          REGION: ${{ inputs.region }}
+          PROJECT_ID: ${{ inputs.project_id }}
+          DELIVER_PIPELINE: ${{ inputs.delivery_pipeline_name }}
+          TARGET: ${{ inputs.delivery_pipeline_target }}
 
 
