@@ -3,7 +3,7 @@ description: 'deploy docs to google cloud storage'
 
 inputs:
   project_id:
-    description: 'literal project identifier'
+    description: 'GCP project id of which executes the action'
     required: true
 
   project_number:
@@ -15,7 +15,11 @@ inputs:
     required: true
 
   bucket:
-    description: 'target bucket to copy docs in'
+    description: 'target bucket it is supposed to be the same as project_id, will be created if missing'
+    required: true
+
+  prefix:
+    description: 'prefix to add to each doc'
     required: true
 
   vistor_projects:
@@ -46,11 +50,10 @@ runs:
         npm i --force
         ls -l
         cd site
-        gsutil rm -r ${{ inputs.bucket }} || echo "bucket doesn't exist"
-        gcloud storage buckets create ${{ inputs.bucket }} --location=${{ inputs.region}}
-        gsutil cp -r * ${{ inputs.bucket }}
+        gsutil ls ${{ inputs.bucket }} \
+          || gcloud storage buckets create ${{ inputs.bucket }} --location=${{ inputs.region}}
+        gsutil cp -r * ${{ inputs.bucket }}/${{ inputs.prefix }}
 
         for project_id in $(echo "${{ inputs.vistor_projects }}" | cut -d "," -f1,2 --output-delimiter=" "); do
           gsutil iam ch serviceAccount:gsa-nv-service-sa@${project_id}.iam.gserviceaccount.com:roles/storage.admin ${{ inputs.bucket }}
         done
-
