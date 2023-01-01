@@ -49,7 +49,7 @@ runs:
           gsutil iam ch serviceAccount:gsa-nv-service-sa@${project_id}.iam.gserviceaccount.com:roles/storage.admin ${BUCKET}
         done
       env:
-        BUCKET: ${{ inputs.bucket_name }}
+        BUCKET: gs://${{ inputs.bucket_name }}
         PROJECT_ID: ${{ inputs.bucket_project_id }}
         REGION: ${{ inputs.region }}
         PREFIX: ${{ inputs.prefix }}
