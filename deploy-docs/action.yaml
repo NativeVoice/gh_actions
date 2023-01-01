@@ -2,20 +2,17 @@ name: 'deploy-docs'
 description: 'deploy docs to google cloud storage'
 
 inputs:
-  project_id:
-    description: 'GCP project id of which executes the action'
-    required: true
-
-  project_number:
-    description: 'numberic project identifier, used in workload_identity_provider'
-    required: true
-
   region:
-    description: ''
+    description: ' bucket project region'
+    required: true
+    default: 'us-east1'
+
+  bucket_project_id:
+    description: 'GCP project in which the bucket is created'
     required: true
 
-  bucket:
-    description: 'target bucket it is supposed to be the same as project_id, will be created if missing'
+  bucket_name:
+    description: 'target bucket, will be created if missing'
     required: true
 
   prefix:
@@ -24,18 +21,12 @@ inputs:
 
   vistor_projects:
     description: 'comma separated project_ids being granted read only access'
-    required: true
+    required: false
+    default: ''
     
 runs:
   using: "composite"
   steps:          
-    - name: "gcloud-setup"
-      uses: NativeVoice/gh_actions/setup-gcloud@develop
-      with:
-        project_id: ${{ inputs.project_id }}
-        project_number: ${{ inputs.project_number }}
-        region: ${{ inputs.region }}
-
     - uses: actions/setup-python@v4
       with:
         python-version: '3.10' 
@@ -50,10 +41,16 @@ runs:
         npm i --force
         ls -l
         cd site
-        gsutil ls ${{ inputs.bucket }} \
-          || gcloud storage buckets create ${{ inputs.bucket }} --location=${{ inputs.region}}
-        gsutil cp -r * ${{ inputs.bucket }}/${{ inputs.prefix }}
+        gsutil ls ${BUCKET} \
+          || gcloud storage buckets create ${BUCKET} --location=${REGION} --project=${PROJECT_ID}
+        gsutil cp -r * ${BUCKET}/${PREFIX}
 
-        for project_id in $(echo "${{ inputs.vistor_projects }}" | cut -d "," -f1,2 --output-delimiter=" "); do
-          gsutil iam ch serviceAccount:gsa-nv-service-sa@${project_id}.iam.gserviceaccount.com:roles/storage.admin ${{ inputs.bucket }}
+        [ -z "${VISTORS}" ] || for project_id in $(echo "${VISTORS}" | cut -d "," -f1,2 --output-delimiter=" "); do
+          gsutil iam ch serviceAccount:gsa-nv-service-sa@${project_id}.iam.gserviceaccount.com:roles/storage.admin ${BUCKET}
         done
+      env:
+        BUCKET: ${{ inputs.bucket_name }}
+        PROJECT_ID: ${{ inputs.bucket_project_id }}
+        REGION: ${{ inputs.region }}
+        PREFIX: ${{ inputs.prefix }}
+        VISTORS: ${{ inputs.vistor_projects }}
