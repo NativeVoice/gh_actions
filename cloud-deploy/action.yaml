@@ -1,0 +1,140 @@
+name: 'gcloud setup'
+description: 'gcloud setup'
+
+inputs:
+  project_id:
+    description: 'literal project identifier'
+    required: true
+
+  region:
+    description: ''
+    required: true
+    default: 'us-east1'
+
+  release_tag:
+    description: ''
+    required: true
+
+  delivery_pipeline_name:
+    description: ''
+    required: true
+
+  image_repository:
+    description: ''
+    required: true
+
+  delivery_pipeline_target:
+    description: 'target deployment env'
+    required: true
+    default: 'dv'
+
+runs:
+  using: "composite"
+  steps:          
+      - name: "Reformat TAG"
+        id: release
+        shell: bash
+        run:   echo ''::set-output name=new_tag::${TAG//./-}''
+        env:
+          TAG: ${{ inputs.release_tag }}
+
+      - name: Configure Docker
+        shell: bash
+        run: |-
+          gcloud --quiet auth configure-docker us-east1-docker.pkg.dev
+
+      # Set up Cloud Deploy in your project following the definition in your clouddeploy.yaml file
+      - name: Create or update Cloud Deploy Pipeline
+        shell: bash
+        run: |-
+          gcloud deploy apply --file clouddeploy.yaml --region ${{ inputs.region }} --project ${{ inputs.project_id }}
+          
+      # Build your application image following the specified profile as defined in your skaffold.yaml file
+      - name: Skaffold build
+        shell: bash
+        run: |-
+          skaffold build --file-output artifacts.json --tag $TAG
+        env:
+          TAG: ${{ steps.release.outputs.new_tag }}
+
+      # Initiate deployment following the pipeline definition from your clouddeploy.yaml file
+      - name: Create release
+        shell: bash
+        run: |-
+          gcloud deploy releases create ${RELEASE_NAME//./-} \
+            --delivery-pipeline=${{ inputs.delivery_pipeline_name }} \
+            --region=${{ inputs.region }} \
+            --gcs-source-staging-dir=gs://${{ inputs.project_id }}_clouddeploy/source \
+            --images=${IMAGE_REPOSITORY}=us-east1-docker.pkg.dev/${{ inputs.project_id }}/applications/${IMAGE_REPOSITORY}:$TAG
+        env:        
+          RELEASE_NAME: release-${{ steps.release.outputs.new_tag }}
+          TAG: ${{ steps.release.outputs.new_tag }}
+          IMAGE_REPOSITORY: ${{ inputs.image_repository }} 
+
+      # it waits up to 5 minutes
+      - name: Wait rollout creation completes
+        shell: bash
+        run: |-
+          for i in $(seq 150); do
+            gcloud deploy rollouts list \
+              --delivery-pipeline=${DELIVER_PIPELINE} \
+              --release=${RELEASE_NAME//./-} \
+              --region=${REGION} \
+              --project=${PROJECT_ID} \
+              | grep name \
+              | grep "to-${TARGET}-0001"
+
+            if [ $? -eq 0 ]; then
+              break
+            fi
+
+            sleep 2
+          done
+        env:
+          RELEASE_NAME: release-${{ steps.release.outputs.new_tag }}
+          REGION: ${{ inputs.region }}
+          PROJECT_ID: ${{ inputs.project_id }}
+          DELIVER_PIPELINE: ${{ inputs.delivery_pipeline_name }}
+          TARGET: ${{ inputs.delivery_pipeline_target }}
+
+      # rollout should be already created up to this step
+      # it waits up to 30 minutes
+      - name: Wait rollout completes
+        shell: bash
+        run: |
+
+          for i in $(seq 360); do
+            state=$(gcloud deploy rollouts describe ${RELEASE_NAME//./-}-to-${TARGET}-0001 \
+              --delivery-pipeline=${DELIVER_PIPELINE}\
+              --release=${RELEASE_NAME//./-} \
+              --region=${REGION} \
+              --project=${PROJECT_ID} | grep ^state | cut -d ' ' -f 2)
+            if [ $? -eq 0 ]; then
+              case $state in
+                SUCCEEDED)
+                  echo "deployment succeeded!"
+                  break
+                  ;;
+                FAILED)
+                  echo "deployment failed"
+                  exit 1
+                  ;;
+                IN_PROGRESS)
+                  echo "still running"
+                  ;;
+                *)
+                  echo "state=$state"
+                  ;;
+              esac
+            fi
+            sleep 5
+          done
+
+        env:
+          RELEASE_NAME: release-${{ steps.release.outputs.new_tag }}
+          REGION: ${{ inputs.region }}
+          PROJECT_ID: ${{ inputs.project_id }}
+          DELIVER_PIPELINE: ${{ inputs.delivery_pipeline_name }}
+          TARGET: ${{ inputs.delivery_pipeline_target }}
+
+

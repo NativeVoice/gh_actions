@@ -1,0 +1,56 @@
+name: 'deploy-docs'
+description: 'deploy docs to google cloud storage'
+
+inputs:
+  region:
+    description: ' bucket project region'
+    required: true
+    default: 'us-east1'
+
+  bucket_project_id:
+    description: 'GCP project in which the bucket is created'
+    required: true
+
+  bucket_name:
+    description: 'target bucket, will be created if missing'
+    required: true
+
+  prefix:
+    description: 'prefix to add to each doc'
+    required: true
+
+  vistor_projects:
+    description: 'comma separated project_ids being granted read only access'
+    required: false
+    default: ''
+    
+runs:
+  using: "composite"
+  steps:          
+    - uses: actions/setup-python@v4
+      with:
+        python-version: '3.10' 
+
+    - name: deploy
+      shell: bash
+      run: |
+        set -e -x
+        pip install mkdocs mkdocs-material mkdocs-minify-plugin mkdocs-git-revision-date-localized-plugin mkdocs-awesome-pages-plugin
+        python3 -m mkdocs build
+        rm -rf node_modules
+        npm i --force
+        ls -l
+        cd site
+        gsutil ls ${BUCKET} \
+          || gcloud storage buckets create ${BUCKET} --location=${REGION} --project=${PROJECT_ID}
+        gsutil cp -r * ${BUCKET}/${PREFIX}
+
+        [ -z "${VISTORS}" ] || for project_id in $(echo "${VISTORS}" | cut -d "," -f1,2 --output-delimiter=" "); do
+          gsutil iam ch serviceAccount:gsa-nv-service-sa@${project_id}.iam.gserviceaccount.com:roles/storage.admin ${BUCKET}
+        done
+      env:
+        BUCKET: gs://${{ inputs.bucket_name }}
+        PROJECT_ID: ${{ inputs.bucket_project_id }}
+        REGION: ${{ inputs.region }}
+        PREFIX: ${{ inputs.prefix }}
+        VISTORS: ${{ inputs.vistor_projects }}

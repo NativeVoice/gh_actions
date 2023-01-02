@@ -1,0 +1,58 @@
+name: 'terraform deploy'
+description: 'deploy infrastructue with terraform script'
+
+inputs:
+  backend_bucket:
+    description: ''
+    required: true
+
+  backend_prefix:
+    description: ''
+    required: true
+
+  var_file:
+    description: ''
+    required: true
+
+  working_directory:
+    description: ''
+    required: false
+    default: '.'
+
+runs:
+  using: "composite"
+  steps:         
+
+    - name: "Setup terraform"
+      uses: hashicorp/setup-terraform@v2
+      with:
+        terraform_version: 1.1.7
+
+    - name: "terraform init"
+      shell: bash
+      run: |
+        terraform init \
+          -input=false \
+          -backend-config=bucket=${_BACKEND_CONFIG_BUCKET} \
+          -backend-config=prefix=${_BACKEND_CONFIG_PREFIX}
+        terraform state list
+      working-directory: ${{ inputs.working_directory }}
+      env:
+        _BACKEND_CONFIG_BUCKET: ${{ inputs.backend_bucket }}
+        _BACKEND_CONFIG_PREFIX: ${{ inputs.backend_prefix }}
+
+    - name: "terraform plan"
+      shell: bash
+      run: |
+        terraform plan -var-file=${VAR_FILE}
+      working-directory: ${{ inputs.working_directory }}
+      env:
+        VAR_FILE: ${{ inputs.var_file }}
+
+    - name: "terraform apply"
+      shell: bash
+      run: |
+        terraform apply -var-file=${VAR_FILE} -auto-approve
+      working-directory: ${{ inputs.working_directory }}
+      env:
+        VAR_FILE: ${{ inputs.var_file }}
