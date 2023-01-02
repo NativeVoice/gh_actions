@@ -29,6 +29,7 @@ runs:
         terraform_version: 1.1.7
 
     - name: "terraform init"
+      shell: bash
       run: |
         terraform init \
           -input=false \
@@ -41,6 +42,7 @@ runs:
         _BACKEND_CONFIG_PREFIX: ${{ inputs.backend_prefix }}
 
     - name: "terraform plan"
+      shell: bash
       run: |
         terraform plan -var-file=${VAR_FILE}
       working-directory: ${{ inputs.working_directory }}
@@ -48,6 +50,7 @@ runs:
         VAR_FILE: ${{ inputs.var_file }}
 
     - name: "terraform apply"
+      shell: bash
       run: |
         terraform apply -var-file=${VAR_FILE} -auto-approve
       working-directory: ${{ inputs.working_directory }}
