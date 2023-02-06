@@ -69,6 +69,13 @@ runs:
     #   shell: bash
     #   run: cat ~/.m2/settings.xml
 
+    - name: Cache Maven packages
+      uses: actions/cache@v2
+      with:
+        path: ~/.m2
+        key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+        restore-keys: ${{ runner.os }}-m2
+
     - name: Build with Maven
       run: mvn -q --batch-mode --update-snapshots package -Dmaven.test.skip=true
       shell: bash
@@ -81,6 +88,10 @@ runs:
       run: |
         git config --global user.email "release-bot@telus.com"
         git config --global user.name "${{ github.actor }}"
+
+    #
+    # Create a prerelease build number if the ref_name matches prerelease_branches
+    #
     - name: "Make the build number for prerelease"
       id: prepare_prerelease
       shell: bash
@@ -91,6 +102,10 @@ runs:
             echo ::set-output name=match::true
         fi
         echo BUILD_NUMBER=$BUILD_NUMBER
+
+    #
+    # Get version from pom.xml, -SNAPSHOT is stripped from the version
+    #
     - name: "Get project version"
       id: get_release_version
       shell: bash
@@ -101,6 +116,10 @@ runs:
         fi
         echo "::set-output name=release_version::${RELEASE_VERSION}"
         echo $RELEASE_VERSION
+
+    #
+    # Tag the prerelease version if this is a prerelease build
+    #
     - name: tag preprelease
       if: steps.prepare_prerelease.outputs.match == 'true'
       uses: mathieudutour/github-tag-action@v6.0
@@ -109,15 +128,23 @@ runs:
         pre_release_branches: ${{ inputs.prerelease_branches }}
         custom_tag: ${{ steps.get_release_version.outputs.release_version }}
 
+    #
     # tag with release version and bump up the version in pom file
+    #
     - name: prepare release
       if: steps.prepare_prerelease.outputs.match != 'true'
       shell: bash
-      run: mvn --batch-mode -DtagNameFormat=v@{project.version} -Darguments=-Dmaven.test.skip=true release:clean release:prepare
+      run: |
+        mvn --batch-mode \
+          -DtagNameFormat=v@{project.version} \
+          -Darguments=-Dmaven.test.skip=true \
+          release:clean \
+          release:prepare
+
+        git checkout ${release_tag}
+      env:
+        release_tag: ${{ steps.get_release_version.outputs.release_version }}
 
     - name: package
       shell: bash
       run: mvn --batch-mode --update-snapshots ${{ inputs.release_goal }} -Dmaven.test.skip=true
-      env:
-        GITHUB_TOKEN: ${{ inputs.repository_user }}
-        GITHUB_ACTOR: ${{ inputs.repository_token }}
