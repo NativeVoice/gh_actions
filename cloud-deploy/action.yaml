@@ -36,7 +36,7 @@ runs:
         shell: bash
         run:   echo ''::set-output name=new_tag::${TAG//./-}''
         env:
-          TAG: ${{ inputs.release_tag }}
+          TAG: v${{ inputs.release_tag }}
 
       - name: Configure Docker
         shell: bash
