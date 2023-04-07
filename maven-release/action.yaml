@@ -87,6 +87,7 @@ runs:
       env:
         GITHUB_TOKEN: ${{ inputs.repository_token }}
         GITHUB_ACTOR: ${{ inputs.repository_user }}
+        GOOGLE_APPLICATION_CREDENTIALS: ${{ inputs.prerelease_branches.gac }}
 
     - name: "Config git submitter user and email"
       shell: bash
@@ -107,6 +108,9 @@ runs:
             echo "match=true" >> $GITHUB_OUTPUT
         fi
         echo BUILD_NUMBER=$BUILD_NUMBER
+      env:
+        GOOGLE_APPLICATION_CREDENTIALS: ${{ inputs.prerelease_branches.gac }}
+
 
     #
     # Get version from pom.xml, -SNAPSHOT is stripped from the version
@@ -121,6 +125,8 @@ runs:
         fi
         echo "release_version=${RELEASE_VERSION}" >> $GITHUB_OUTPUT
         echo $RELEASE_VERSION
+      env:
+        GOOGLE_APPLICATION_CREDENTIALS: ${{ inputs.prerelease_branches.gac }}
 
     #
     # Tag the prerelease version if this is a prerelease build
@@ -149,6 +155,7 @@ runs:
         git checkout ${release_tag}
       env:
         release_tag: ${{ steps.get_release_version.outputs.release_version }}
+        GOOGLE_APPLICATION_CREDENTIALS: ${{ inputs.prerelease_branches.gac }}
 
     - name: package
       shell: bash
