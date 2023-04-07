@@ -153,7 +153,7 @@ runs:
     - name: package
       shell: bash
       run: |-
-        echo ${GOOGLE_APPLICATION_CREDENTIALS}
+        echo GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS}
         mvn --batch-mode --update-snapshots ${{ inputs.release_goal }} -Dmaven.test.skip=true
       env:
         GOOGLE_APPLICATION_CREDENTIALS: ${{ inputs.prerelease_branches.gac }}
