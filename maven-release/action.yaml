@@ -82,7 +82,9 @@ runs:
         restore-keys: ${{ runner.os }}-m2
 
     - name: Build with Maven
-      run: mvn -q --batch-mode --update-snapshots package -Dmaven.test.skip=true
+      run: |-
+        echo GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS}
+        mvn -q --batch-mode --update-snapshots package -Dmaven.test.skip=true
       shell: bash
       env:
         GITHUB_TOKEN: ${{ inputs.repository_token }}
