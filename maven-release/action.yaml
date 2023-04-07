@@ -31,6 +31,11 @@ inputs:
     description: "maven goal, package or deploy"
     required: true
     default: "package"
+  
+  gac:
+    description: "GOOGLE_APPLICATION_CREDENTIALS"
+    required: false
+    default: ""
 
 outputs:
   release_version:
@@ -147,4 +152,8 @@ runs:
 
     - name: package
       shell: bash
-      run: mvn --batch-mode --update-snapshots ${{ inputs.release_goal }} -Dmaven.test.skip=true
+      run: |-
+        echo ${GOOGLE_APPLICATION_CREDENTIALS}
+        mvn --batch-mode --update-snapshots ${{ inputs.release_goal }} -Dmaven.test.skip=true
+      env:
+        GOOGLE_APPLICATION_CREDENTIALS: ${{ inputs.prerelease_branches.gac }}
