@@ -156,7 +156,7 @@ runs:
 
         git checkout ${release_tag}
       env:
-        release_tag: ${{ steps.get_release_version.outputs.release_version }}
+        release_tag: v${{ steps.get_release_version.outputs.release_version }}
         GOOGLE_APPLICATION_CREDENTIALS: ${{ inputs.prerelease_branches.gac }}
 
     - name: package
