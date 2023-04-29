@@ -15,6 +15,11 @@ inputs:
     description: ''
     required: true
 
+  release_name_prefix:
+    default: 'v'
+    description: 'add a prefix to release name'
+    required: false
+
   delivery_pipeline_name:
     description: ''
     required: true
@@ -30,13 +35,15 @@ inputs:
 
 runs:
   using: "composite"
-  steps:          
+  steps:
+
+      # reformat release tag for cloud deploy release name      
       - name: "Reformat TAG"
         id: release
         shell: bash
         run:   echo ''::set-output name=new_tag::${TAG//./-}''
         env:
-          TAG: v${{ inputs.release_tag }}
+          TAG: ${{ inputs.release_name_prefix }}${{ inputs.release_tag }}
 
       - name: Configure Docker
         shell: bash
