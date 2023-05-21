@@ -37,6 +37,11 @@ inputs:
     required: false
     default: ""
 
+  maven_test_skip:
+    description: "set to true to skip maven test"
+    required: false
+    default: "true"
+
 outputs:
   release_version:
     description: "Tagged Release Version"
@@ -84,12 +89,13 @@ runs:
     - name: Build with Maven
       run: |-
         echo GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS}
-        mvn -q --batch-mode --update-snapshots package -Dmaven.test.skip=true
+        mvn -q --batch-mode --update-snapshots package -Dmaven.test.skip=${MAVEN_TEST_SKIP}
       shell: bash
       env:
         GITHUB_TOKEN: ${{ inputs.repository_token }}
         GITHUB_ACTOR: ${{ inputs.repository_user }}
         GOOGLE_APPLICATION_CREDENTIALS: ${{ inputs.prerelease_branches.gac }}
+        MAVEN_TEST_SKIP: ${{ inputs.maven_test_skip }}
 
     - name: "Config git submitter user and email"
       shell: bash
