@@ -83,13 +83,11 @@ runs:
 
     - name: Build with Maven
       run: |-
-        echo GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS}
         mvn -q --batch-mode --update-snapshots package -Dmaven.test.skip=true
       shell: bash
       env:
         GITHUB_TOKEN: ${{ inputs.repository_token }}
         GITHUB_ACTOR: ${{ inputs.repository_user }}
-        GOOGLE_APPLICATION_CREDENTIALS: ${{ inputs.prerelease_branches.gac }}
 
     - name: "Config git submitter user and email"
       shell: bash
@@ -110,9 +108,14 @@ runs:
             echo "match=true" >> $GITHUB_OUTPUT
         fi
         echo BUILD_NUMBER=$BUILD_NUMBER
-      env:
-        GOOGLE_APPLICATION_CREDENTIALS: ${{ inputs.prerelease_branches.gac }}
 
+    - name: "check if code is on release branch"
+      id: check_release_branch
+      shell: bash
+      run: |
+        if [[ ${{ github.ref_name }} =~ ${{ inputs.release_branches }} ]]; then
+            echo "match=true" >> $GITHUB_OUTPUT
+        fi
 
     #
     # Get version from pom.xml, -SNAPSHOT is stripped from the version
@@ -127,8 +130,6 @@ runs:
         fi
         echo "release_version=${RELEASE_VERSION}" >> $GITHUB_OUTPUT
         echo $RELEASE_VERSION
-      env:
-        GOOGLE_APPLICATION_CREDENTIALS: ${{ inputs.prerelease_branches.gac }}
 
     #
     # Tag the prerelease version if this is a prerelease build
@@ -145,7 +146,7 @@ runs:
     # tag with release version and bump up the version in pom file
     #
     - name: prepare release
-      if: steps.prepare_prerelease.outputs.match != 'true'
+      if: steps.check_release_branch.outputs.match == 'true'
       shell: bash
       run: |
         mvn --batch-mode \
@@ -157,12 +158,8 @@ runs:
         git checkout ${release_tag}
       env:
         release_tag: v${{ steps.get_release_version.outputs.release_version }}
-        GOOGLE_APPLICATION_CREDENTIALS: ${{ inputs.prerelease_branches.gac }}
 
     - name: package
       shell: bash
       run: |-
-        echo GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS}
         mvn --batch-mode --update-snapshots ${{ inputs.release_goal }} -Dmaven.test.skip=true
-      env:
-        GOOGLE_APPLICATION_CREDENTIALS: ${{ inputs.prerelease_branches.gac }}
