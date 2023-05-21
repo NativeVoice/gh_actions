@@ -95,6 +95,7 @@ runs:
         export BUILD_NUMBER=$(date +%Y%m%d%H%M%S)
         echo "build_number=${BUILD_NUMBER}" >> $GITHUB_OUTPUT
         for branch in $PRE_RELEASE_BRANCHES; do
+          echo "checking branch $branch"
           if [[ ${{ github.ref_name }} =~ $branch ]]; then
               echo "match=true" >> $GITHUB_OUTPUT
               break
@@ -110,6 +111,7 @@ runs:
       shell: bash
       run: |
         for branch in $RELEASE_BRANCHES; do
+          echo "checking branch $branch"
           if [[ ${{ github.ref_name }} =~ $branch ]]; then
               echo "match=true" >> $GITHUB_OUTPUT
               break
@@ -130,7 +132,7 @@ runs:
           RELEASE_VERSION="$RELEASE_VERSION-b${{ steps.prepare_prerelease.outputs.build_number }}"  
         fi
         echo "release_version=${RELEASE_VERSION}" >> $GITHUB_OUTPUT
-        echo $RELEASE_VERSION
+        echo RELEASE_VERSION=$RELEASE_VERSION
       env:
         GOOGLE_APPLICATION_CREDENTIALS: ${{ inputs.prerelease_branches.gac }}
 
