@@ -96,7 +96,7 @@ runs:
         echo "build_number=${BUILD_NUMBER}" >> $GITHUB_OUTPUT
         for branch in $PRE_RELEASE_BRANCHES; do
           echo "checking branch $branch"
-          if [[ ${{ github.ref_name }} =~ $branch ]]; then
+          if [[ ${{ github.ref_name }} =~ $branch || "${{ github.head_ref }}" =~ $branch ]]; then
               echo "match=true" >> $GITHUB_OUTPUT
               break
           fi
