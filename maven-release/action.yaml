@@ -61,24 +61,6 @@ runs:
         distribution: 'adopt'
         cache: maven
 
-    # - name: "Create maven setting"
-    #   uses: whelk-io/maven-settings-xml-action@v20
-    #   with:
-    #     servers: |
-    #       [
-    #         { "id": "github", "username": "${{ inputs.github_actor }}", "password": "${{ inputs.github_token }}" },
-    #         { "id": "github-core", "username": "${{ inputs.repository_user }}", "password": "${{ inputs.repository_token }}" },
-    #         { "id": "github-summarizer", "username": "${{ inputs.repository_user }}", "password": "${{ inputs.repository_token }}" },
-    #         { "id": "github-ccs-gateway", "username": "${{ inputs.repository_user }}", "password": "${{ inputs.repository_token }}" }
-    #       ]
-    #   env:
-    #     REPO_TOKEN: ${{ inputs.repository_token }}
-    #     REPO_ACTOR: ${{ inputs.repository_user }}
-
-    # - name: "Print maven settings"
-    #   shell: bash
-    #   run: cat ~/.m2/settings.xml
-
     - name: Cache Maven packages
       uses: actions/cache@v2
       with:
@@ -112,20 +94,29 @@ runs:
       run: |
         export BUILD_NUMBER=$(date +%Y%m%d%H%M%S)
         echo "build_number=${BUILD_NUMBER}" >> $GITHUB_OUTPUT
-        if [[ ${{ github.ref_name }} =~ ${{ inputs.prerelease_branches }} ]]; then
-            echo "match=true" >> $GITHUB_OUTPUT
-        fi
+        for branch in $PRE_RELEASE_BRANCHES; do
+          if [[ ${{ github.ref_name }} =~ $branch ]]; then
+              echo "match=true" >> $GITHUB_OUTPUT
+              break
+          fi
+        done
         echo BUILD_NUMBER=$BUILD_NUMBER
       env:
         GOOGLE_APPLICATION_CREDENTIALS: ${{ inputs.prerelease_branches.gac }}
+        PRE_RELEASE_BRANCHES: ${{ inputs.prerelease_branches }}
 
     - name: "check if code is on release branch"
       id: check_release_branch
       shell: bash
       run: |
-        if [[ ${{ github.ref_name }} =~ ${{ inputs.release_branches }} ]]; then
-            echo "match=true" >> $GITHUB_OUTPUT
-        fi
+        for branch in $RELEASE_BRANCHES; do
+          if [[ ${{ github.ref_name }} =~ $branch ]]; then
+              echo "match=true" >> $GITHUB_OUTPUT
+              break
+          fi
+        done
+      env:
+        RELEASE_BRANCHES: ${{ inputs.release_branches }}
 
     #
     # Get version from pom.xml, -SNAPSHOT is stripped from the version
