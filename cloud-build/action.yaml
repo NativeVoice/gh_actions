@@ -1,0 +1,59 @@
+name: 'gcloud setup'
+description: 'gcloud setup'
+
+inputs:
+  project_id:
+    description: 'literal project identifier'
+    required: true
+
+  region:
+    description: ''
+    required: true
+    default: 'us-east1'
+
+  release_tag:
+    description: ''
+    required: true
+
+  delivery_pipeline_name:
+    description: ''
+    required: true
+
+  image_repository:
+    description: ''
+    required: true
+
+  delivery_pipeline_target:
+    description: 'target deployment env'
+    required: true
+    default: 'dv'
+
+runs:
+  using: "composite"
+  steps:          
+      - name: "Reformat TAG"
+        id: release
+        shell: bash
+        run:   echo ''::set-output name=new_tag::${TAG//./-}''
+        env:
+          TAG: ${{ inputs.release_tag }}
+
+      - name: Configure Docker
+        shell: bash
+        run: |-
+          gcloud --quiet auth configure-docker us-east1-docker.pkg.dev
+
+      # Set up Cloud Deploy in your project following the definition in your clouddeploy.yaml file
+      - name: Create or update Cloud Deploy Pipeline
+        shell: bash
+        run: |-
+          gcloud deploy apply --file clouddeploy.yaml --region ${{ inputs.region }} --project ${{ inputs.project_id }}
+          
+      # Build your application image following the specified profile as defined in your skaffold.yaml file
+      - name: Skaffold build
+        shell: bash
+        run: |-
+          skaffold build --file-output artifacts.json --tag $TAG
+        env:
+          TAG: ${{ steps.release.outputs.new_tag }}
+
