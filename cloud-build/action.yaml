@@ -43,11 +43,6 @@ runs:
         run: |-
           gcloud --quiet auth configure-docker us-east1-docker.pkg.dev
 
-      # Set up Cloud Deploy in your project following the definition in your clouddeploy.yaml file
-      - name: Create or update Cloud Deploy Pipeline
-        shell: bash
-        run: |-
-          gcloud deploy apply --file clouddeploy.yaml --region ${{ inputs.region }} --project ${{ inputs.project_id }}
           
       # Build your application image following the specified profile as defined in your skaffold.yaml file
       - name: Skaffold build
