@@ -27,7 +27,9 @@ inputs:
     description: 'target deployment env'
     required: true
     default: 'dv'
-
+  build-profile:
+    description: ''
+    required: true
 runs:
   using: "composite"
   steps:          
@@ -48,7 +50,7 @@ runs:
       - name: Skaffold build
         shell: bash
         run: |-
-          skaffold build --file-output artifacts.json --tag $TAG
+          skaffold build --profile ${{ inputs.build-profile }} --file-output artifacts.json --tag $TAG
         env:
           TAG: ${{ steps.release.outputs.new_tag }}
 
